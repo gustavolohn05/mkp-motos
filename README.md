@@ -32,3 +32,4 @@ Os arquivos estáticos ficam em `dist/`.
 - **Aba Edição do Site**: editar textos, slogans, imagens, contato, footer
 
 Todas as alterações são salvas no `localStorage` do navegador e refletem em tempo real.
+"rebuild" 
