@@ -27,37 +27,40 @@ export function SiteProvider({ children }: { children: ReactNode }) {
 
   // Busca motos do Supabase ao carregar
   useEffect(() => {
-    async function fetchMotos() {
-      try {
-        const { data: motos, error } = await supabase
-          .from('motos')
-          .select('*')
-          .order('id')
+   async function fetchMotos() {
+  try {
+    console.log('Buscando motos do Supabase...')
+    const { data: motos, error } = await supabase
+      .from('motos')
+      .select('*')
+      .order('id')
 
-        if (error) {
-          console.error('Erro ao buscar motos:', error)
-          setLoading(false)
-          return
-        }
+    console.log('Motos:', motos)
+    console.log('Erro:', error)
 
-        if (motos && motos.length > 0) {
-          setData(prev => ({ ...prev, motos }))
-        } else {
-          // Se banco vazio, insere as motos iniciais
-          const { error: insertError } = await supabase
-            .from('motos')
-            .insert(initialData.motos)
+    if (error) {
+      console.error('Erro ao buscar motos:', error)
+      setLoading(false)
+      return
+    }
 
-          if (!insertError) {
-            setData(prev => ({ ...prev, motos: initialData.motos }))
-          }
-        }
-      } catch (err) {
-        console.error('Erro de conexão:', err)
-      } finally {
-        setLoading(false)
+    if (motos && motos.length > 0) {
+      setData(prev => ({ ...prev, motos }))
+    } else {
+      const { error: insertError } = await supabase
+        .from('motos')
+        .insert(initialData.motos)
+
+      if (!insertError) {
+        setData(prev => ({ ...prev, motos: initialData.motos }))
       }
     }
+  } catch (err) {
+    console.error('Erro de conexão:', err)
+  } finally {
+    setLoading(false)
+  }
+}
 
     fetchMotos()
   }, [])
