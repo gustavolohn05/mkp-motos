@@ -218,6 +218,8 @@ export default function StockManager() {
   const [filtroMarca, setFiltroMarca] = useState('Todas')
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
   const [filtroStatus, setFiltroStatus] = useState('Todas')
+  const [operationError, setOperationError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const marcas = useMemo(() => ['Todas', ...Array.from(new Set(data.motos.map(m => m.marca)))], [data.motos])
 
@@ -228,14 +230,42 @@ export default function StockManager() {
     return true
   }), [data.motos, filtroMarca, filtroCategoria, filtroStatus])
 
-  const handleSaveNew = (m: Omit<Moto, 'id'> | Moto) => {
-    addMoto(m as Omit<Moto, 'id'>)
+  // Aguarda confirmação do banco antes de fechar o modal
+  const handleSaveNew = async (m: Omit<Moto, 'id'> | Moto) => {
+    setIsSubmitting(true)
+    setOperationError(null)
+    const { error } = await addMoto(m as Omit<Moto, 'id'>)
+    setIsSubmitting(false)
+    if (error) {
+      setOperationError(error)
+      return // Não fecha o modal se deu erro
+    }
     setShowForm(false)
   }
 
-  const handleSaveEdit = (m: Omit<Moto, 'id'> | Moto) => {
-    updateMoto(m as Moto)
+  const handleSaveEdit = async (m: Omit<Moto, 'id'> | Moto) => {
+    setIsSubmitting(true)
+    setOperationError(null)
+    const { error } = await updateMoto(m as Moto)
+    setIsSubmitting(false)
+    if (error) {
+      setOperationError(error)
+      return
+    }
     setEditMoto(null)
+  }
+
+  const handleDelete = async (id: string) => {
+    setIsSubmitting(true)
+    setOperationError(null)
+    const { error } = await removeMoto(id)
+    setIsSubmitting(false)
+    if (error) {
+      setOperationError(error)
+      setConfirmDelete(null)
+      return
+    }
+    setConfirmDelete(null)
   }
 
   const filterBtnCls = (active: boolean) =>
@@ -251,6 +281,16 @@ export default function StockManager() {
         <div>
           <h2 className="font-bebas text-3xl text-white tracking-wide">Gerenciar Estoque</h2>
           <p className="font-barlow text-sm text-mkp-muted">{data.motos.length} motos cadastradas</p>
+
+          {/* Exibe erro de operação */}
+          {operationError && (
+            <div className="mt-2 flex items-start gap-2 bg-red-900/30 border border-red-500/40 rounded-sm px-3 py-2 max-w-lg">
+              <span className="font-barlow text-xs text-red-400">{operationError}</span>
+              <button onClick={() => setOperationError(null)} className="ml-auto text-red-400 hover:text-white flex-shrink-0">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -400,7 +440,7 @@ export default function StockManager() {
             <p className="font-barlow text-sm text-mkp-muted mb-6">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 font-barlow font-600 text-sm uppercase tracking-widest py-3 border border-mkp-border text-mkp-muted hover:text-white transition-all rounded-sm">Cancelar</button>
-              <button onClick={() => { removeMoto(confirmDelete); setConfirmDelete(null) }} className="flex-1 font-barlow font-700 text-sm uppercase tracking-widest py-3 bg-mkp-red hover:bg-mkp-red-hover text-white transition-all rounded-sm">Remover</button>
+              <button onClick={() => { handleDelete(confirmDelete); }} disabled={isSubmitting} className="flex-1 font-barlow font-700 text-sm uppercase tracking-widest py-3 bg-mkp-red hover:bg-mkp-red-hover text-white transition-all rounded-sm disabled:opacity-50 disabled:cursor-not-allowed">{isSubmitting ? 'Removendo...' : 'Remover'}</button>
             </div>
           </motion.div>
         </div>
