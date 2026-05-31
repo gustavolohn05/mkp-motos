@@ -10,7 +10,7 @@ import AnimatedSection from '../ui/AnimatedSection'
 const CATEGORIAS = ['Todas', 'Sport/Superbike', 'Street Naked', 'Trail/Adventure', 'Scooter', 'Crossover']
 
 export default function Estoque() {
-  const { data } = useSite()
+  const { data, loading } = useSite()
   const [selectedMoto, setSelectedMoto] = useState<Moto | null>(null)
   const [filtroMarca, setFiltroMarca] = useState('Todas')
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
@@ -98,7 +98,20 @@ export default function Estoque() {
         </div>
 
         {/* Grid */}
-        {motosFiltradas.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="bg-mkp-card border border-mkp-border rounded-sm overflow-hidden animate-pulse">
+                <div className="w-full h-48 bg-mkp-border/40" />
+                <div className="p-4 flex flex-col gap-3">
+                  <div className="h-4 bg-mkp-border/40 rounded w-2/3" />
+                  <div className="h-3 bg-mkp-border/30 rounded w-1/2" />
+                  <div className="h-5 bg-mkp-border/40 rounded w-1/3 mt-2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : motosFiltradas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {motosFiltradas.map((moto, i) => (
               <MotoCard

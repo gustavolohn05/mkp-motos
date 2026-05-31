@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Edit2, Trash2, Filter, X, Star, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, Filter, X, Star, Upload, GripVertical } from 'lucide-react'
 import { useSite } from '../../context/SiteContext'
 import { Moto } from '../../data/initialData'
 
@@ -42,6 +42,7 @@ interface MotoFormProps {
 function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
   const [form, setForm] = useState({ ...initial, km: initial.km ?? 0 })
   const fileRef = useRef<HTMLInputElement>(null)
+  const dragIndex = useRef<number | null>(null)
 
   const set = (field: string, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }))
@@ -54,6 +55,22 @@ function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
 
   const removePhoto = (i: number) =>
     setForm(prev => ({ ...prev, fotos: prev.fotos.filter((_, idx) => idx !== i) }))
+
+  const handleDragStart = (i: number) => { dragIndex.current = i }
+
+  const handleDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault()
+    if (dragIndex.current === null || dragIndex.current === i) return
+    setForm(prev => {
+      const fotos = [...prev.fotos]
+      const [moved] = fotos.splice(dragIndex.current!, 1)
+      fotos.splice(i, 0, moved)
+      dragIndex.current = i
+      return { ...prev, fotos }
+    })
+  }
+
+  const handleDragEnd = () => { dragIndex.current = null }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -179,19 +196,37 @@ function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
               />
             </div>
             {form.fotos.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {form.fotos.map((foto, i) => (
-                  <div key={i} className="relative group">
-                    <img src={foto} alt="" className="w-20 h-14 object-cover rounded-sm border border-mkp-border" />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(i)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-mkp-red rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              <div className="mt-3">
+                <p className="font-barlow text-xs text-mkp-muted/50 mb-2">Arraste para reordenar · A primeira foto é a capa</p>
+                <div className="flex flex-wrap gap-2">
+                  {form.fotos.map((foto, i) => (
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={() => handleDragStart(i)}
+                      onDragOver={e => handleDragOver(e, i)}
+                      onDragEnd={handleDragEnd}
+                      className="relative group cursor-grab active:cursor-grabbing"
                     >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                      <img src={foto} alt="" className={`w-20 h-14 object-cover rounded-sm border transition-colors ${i === 0 ? 'border-mkp-red' : 'border-mkp-border'}`} />
+                      {i === 0 && (
+                        <span className="absolute bottom-0 left-0 right-0 bg-mkp-red/80 text-white font-barlow text-[10px] text-center py-0.5 rounded-b-sm">
+                          CAPA
+                        </span>
+                      )}
+                      <div className="absolute top-0.5 left-0.5 text-white/40 group-hover:text-white/80 transition-colors">
+                        <GripVertical className="w-3 h-3" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-mkp-red rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
