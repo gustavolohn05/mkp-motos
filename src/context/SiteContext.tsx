@@ -18,7 +18,7 @@ interface SiteContextType {
 const SiteContext = createContext<SiteContextType | null>(null)
 
 export function SiteProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<SiteData>(initialData)
+  const [data, setData] = useState<SiteData>({ ...initialData, motos: [] })
   const [loading, setLoading] = useState(true)
   const [isAdminOpen, setIsAdminOpen] = useState(false)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
