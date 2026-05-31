@@ -40,25 +40,9 @@ export function SiteProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        if (motos && motos.length > 0) {
-          setData(prev => ({ ...prev, motos }))
-        } else {
-          // Seed inicial: usa apenas URLs externas, sem base64
-          const motosParaSeed = initialData.motos.map(m => ({
-            ...m,
-            // Garante que fotos sejam URLs, não base64
-            fotos: m.fotos.filter(f => f.startsWith('http'))
-          }))
-          const { error: insertError } = await supabase
-            .from('motos')
-            .insert(motosParaSeed)
-
-          if (insertError) {
-            console.error('Erro no seed:', insertError.message)
-          } else {
-            setData(prev => ({ ...prev, motos: initialData.motos }))
-          }
-        }
+        // Sempre usa o que vier do banco, mesmo que vazio
+        // NUNCA reinsere initialData automaticamente — isso causava motos deletadas voltarem
+        setData(prev => ({ ...prev, motos: motos ?? [] }))
       } catch (err) {
         console.error('Erro de conexão:', err)
       } finally {
