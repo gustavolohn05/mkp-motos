@@ -97,27 +97,27 @@ export const initialData: SiteData = {
     {
       nome: 'Sport / Superbike',
       slogan: 'Adrenalina pura em cada curva',
-      imagem: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1623756005690-55dff6465ed5?w=800&q=85&fit=crop',
     },
     {
       nome: 'Street Naked',
       slogan: 'Poder sem fronteiras nas ruas',
-      imagem: 'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1638289394195-64e572399560?w=800&q=85&fit=crop',
     },
     {
       nome: 'Trail / Adventure',
       slogan: 'Sem destino. Sem limites.',
-      imagem: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1778693885834-87668850413e?w=800&q=85&fit=crop',
     },
     {
       nome: 'Scooter',
       slogan: 'Agilidade e estilo no dia a dia',
-      imagem: 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1653609545903-d3a2c64daba4?w=800&q=85&fit=crop',
     },
     {
       nome: 'Crossover',
       slogan: 'Versatilidade para qualquer terreno',
-      imagem: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1670995982270-b892c06054c5?w=800&q=85&fit=crop',
     },
   ],
   marcas: [
