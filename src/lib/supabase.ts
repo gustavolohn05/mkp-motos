@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = (import.meta as any).env.VITE_SUPABASE_URL
-const key = (import.meta as any).env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-console.log('Supabase URL:', url)
-console.log('Supabase KEY:', key ? 'definida' : 'indefinida')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não encontradas no .env')
+}
 
-export const supabase = createClient(url, key)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
