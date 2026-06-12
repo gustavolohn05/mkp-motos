@@ -26,9 +26,9 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
-    async function fetchMotos() {
+    async function fetchMotos(tentativa = 1) {
       try {
-        console.log('Buscando motos do Supabase...')
+        console.log(`Buscando motos do Supabase... (tentativa ${tentativa})`)
         const { data: motos, error } = await supabase
           .from('motos')
           .select('*')
@@ -36,6 +36,14 @@ export function SiteProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           console.error('Erro ao buscar motos:', error.message, error.details, error.hint)
+
+          if (tentativa < 3) {
+            console.warn(`Tentando novamente em 2s... (${tentativa}/3)`)
+            setTimeout(() => fetchMotos(tentativa + 1), 2000)
+            return
+          }
+
+          // Esgotou as tentativas
           setLoading(false)
           return
         }
@@ -43,9 +51,16 @@ export function SiteProvider({ children }: { children: ReactNode }) {
         // Sempre usa o que vier do banco, mesmo que vazio
         // NUNCA reinsere initialData automaticamente — isso causava motos deletadas voltarem
         setData(prev => ({ ...prev, motos: motos ?? [] }))
+        setLoading(false)
       } catch (err) {
         console.error('Erro de conexão:', err)
-      } finally {
+
+        if (tentativa < 3) {
+          console.warn(`Erro de conexão. Tentando novamente em 2s... (${tentativa}/3)`)
+          setTimeout(() => fetchMotos(tentativa + 1), 2000)
+          return
+        }
+
         setLoading(false)
       }
     }
