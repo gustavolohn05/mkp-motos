@@ -43,10 +43,13 @@ export function SiteProvider({ children }: { children: ReactNode }) {
             return
           }
 
+          // Esgotou as tentativas
           setLoading(false)
           return
         }
 
+        // Sempre usa o que vier do banco, mesmo que vazio
+        // NUNCA reinsere initialData automaticamente — isso causava motos deletadas voltarem
         setData(prev => ({ ...prev, motos: motos ?? [] }))
         setLoading(false)
       } catch (err) {
@@ -78,10 +81,12 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const addMoto = async (moto: Omit<Moto, 'id'>): Promise<{ error: string | null }> => {
     const newMoto: Moto = { ...moto, id: Date.now().toString() }
 
+    // Separa fotos base64 das URLs normais
     const fotosParaSalvar = newMoto.fotos.map(f => {
       if (f.startsWith('data:image')) {
+        // Base64: avisa no console — deve usar Storage do Supabase no futuro
         console.warn('Foto em base64 detectada. Use URLs externas ou Supabase Storage.')
-        return f
+        return f // mantém por ora, mas veja nota abaixo
       }
       return f
     })
@@ -92,6 +97,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Erro ao adicionar moto:', error.message, error.details, error.hint)
+      // Erro específico de RLS
       if (error.message.includes('row-level security') || error.code === '42501') {
         return { error: 'Permissão negada pelo banco de dados. Verifique as políticas RLS no Supabase.' }
       }
@@ -131,7 +137,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
 
     const { error, count } = await supabase
       .from('motos')
-      .delete({ count: 'exact' })
+      .delete({ count: 'exact' }) // retorna quantas linhas foram deletadas
       .eq('id', id)
 
     console.log('Resultado do delete - erro:', error, 'linhas deletadas:', count)
@@ -145,7 +151,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     }
 
     if (count === 0) {
-      console.warn('Delete executou sem erro mas nenhuma linha foi removida.')
+      console.warn('Delete executou sem erro mas nenhuma linha foi removida. Possível problema de RLS silencioso ou id não encontrado.')
       return { error: 'Nenhuma moto encontrada com esse ID. Verifique as políticas RLS no Supabase.' }
     }
 

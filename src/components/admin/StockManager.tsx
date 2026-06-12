@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit2, Trash2, Filter, X, Star, Upload, GripVertical } from 'lucide-react'
 import { useSite } from '../../context/SiteContext'
 import { Moto } from '../../data/initialData'
+import { supabase } from '../../lib/supabase'
 
 const CATEGORIAS: Moto['categoria'][] = [
   'Sport/Superbike', 'Street Naked', 'Trail/Adventure', 'Scooter', 'Crossover',
@@ -23,13 +24,19 @@ function formatKm(km?: number) {
   return km.toLocaleString('pt-BR') + ' KM'
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+async function uploadFotoToStorage(file: File): Promise<string> {
+  const ext = file.name.split('.').pop()
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const path = `fotos/${fileName}`
+
+  const { error } = await supabase.storage
+    .from('motos-fotos')
+    .upload(path, file, { cacheControl: '3600', upsert: false })
+
+  if (error) throw new Error(`Erro ao fazer upload: ${error.message}`)
+
+  const { data } = supabase.storage.from('motos-fotos').getPublicUrl(path)
+  return data.publicUrl
 }
 
 interface MotoFormProps {
@@ -41,6 +48,8 @@ interface MotoFormProps {
 
 function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
   const [form, setForm] = useState({ ...initial, km: initial.km ?? 0 })
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const dragIndex = useRef<number | null>(null)
 
@@ -49,8 +58,17 @@ function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return
-    const b64s = await Promise.all(Array.from(files).map(fileToBase64))
-    setForm(prev => ({ ...prev, fotos: [...prev.fotos, ...b64s] }))
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const urls = await Promise.all(Array.from(files).map(uploadFotoToStorage))
+      setForm(prev => ({ ...prev, fotos: [...prev.fotos, ...urls] }))
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao fazer upload das fotos.'
+      setUploadError(msg)
+    } finally {
+      setUploading(false)
+    }
   }
 
   const removePhoto = (i: number) =>
@@ -180,11 +198,13 @@ function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
           <div>
             <label className={labelCls}>Fotos</label>
             <div
-              className="border-2 border-dashed border-mkp-border hover:border-mkp-red/50 rounded-sm p-6 text-center cursor-pointer transition-colors"
-              onClick={() => fileRef.current?.click()}
+              className={`border-2 border-dashed rounded-sm p-6 text-center transition-colors ${uploading ? 'border-mkp-red/50 cursor-wait' : 'border-mkp-border hover:border-mkp-red/50 cursor-pointer'}`}
+              onClick={() => !uploading && fileRef.current?.click()}
             >
-              <Upload className="w-8 h-8 text-mkp-muted mx-auto mb-2" />
-              <p className="font-barlow text-sm text-mkp-muted">Clique para adicionar fotos (PNG, JPG)</p>
+              <Upload className={`w-8 h-8 mx-auto mb-2 ${uploading ? 'text-mkp-red animate-pulse' : 'text-mkp-muted'}`} />
+              <p className="font-barlow text-sm text-mkp-muted">
+                {uploading ? 'Enviando fotos...' : 'Clique para adicionar fotos (PNG, JPG)'}
+              </p>
               <p className="font-barlow text-xs text-mkp-muted/50 mt-1">Múltiplas fotos permitidas</p>
               <input
                 ref={fileRef}
@@ -195,6 +215,11 @@ function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
                 onChange={e => handleFiles(e.target.files)}
               />
             </div>
+
+            {uploadError && (
+              <p className="font-barlow text-xs text-red-400 mt-2">{uploadError}</p>
+            )}
+
             {form.fotos.length > 0 && (
               <div className="mt-3">
                 <p className="font-barlow text-xs text-mkp-muted/50 mb-2">Arraste para reordenar · A primeira foto é a capa</p>
@@ -235,8 +260,8 @@ function MotoForm({ initial, onSave, onCancel, title }: MotoFormProps) {
             <button type="button" onClick={onCancel} className="flex-1 font-barlow font-600 text-sm uppercase tracking-widest py-3 border border-mkp-border text-mkp-muted hover:text-white transition-all rounded-sm">
               Cancelar
             </button>
-            <button type="submit" className="flex-1 font-barlow font-700 text-sm uppercase tracking-widest py-3 bg-mkp-red hover:bg-mkp-red-hover text-white transition-all rounded-sm">
-              Salvar
+            <button type="submit" disabled={uploading} className="flex-1 font-barlow font-700 text-sm uppercase tracking-widest py-3 bg-mkp-red hover:bg-mkp-red-hover text-white transition-all rounded-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              {uploading ? 'Aguarde...' : 'Salvar'}
             </button>
           </div>
         </form>
@@ -265,7 +290,6 @@ export default function StockManager() {
     return true
   }), [data.motos, filtroMarca, filtroCategoria, filtroStatus])
 
-  // Aguarda confirmação do banco antes de fechar o modal
   const handleSaveNew = async (m: Omit<Moto, 'id'> | Moto) => {
     setIsSubmitting(true)
     setOperationError(null)
@@ -273,7 +297,7 @@ export default function StockManager() {
     setIsSubmitting(false)
     if (error) {
       setOperationError(error)
-      return // Não fecha o modal se deu erro
+      return
     }
     setShowForm(false)
   }
@@ -317,7 +341,6 @@ export default function StockManager() {
           <h2 className="font-bebas text-3xl text-white tracking-wide">Gerenciar Estoque</h2>
           <p className="font-barlow text-sm text-mkp-muted">{data.motos.length} motos cadastradas</p>
 
-          {/* Exibe erro de operação */}
           {operationError && (
             <div className="mt-2 flex items-start gap-2 bg-red-900/30 border border-red-500/40 rounded-sm px-3 py-2 max-w-lg">
               <span className="font-barlow text-xs text-red-400">{operationError}</span>
@@ -475,7 +498,7 @@ export default function StockManager() {
             <p className="font-barlow text-sm text-mkp-muted mb-6">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 font-barlow font-600 text-sm uppercase tracking-widest py-3 border border-mkp-border text-mkp-muted hover:text-white transition-all rounded-sm">Cancelar</button>
-              <button onClick={() => { handleDelete(confirmDelete); }} disabled={isSubmitting} className="flex-1 font-barlow font-700 text-sm uppercase tracking-widest py-3 bg-mkp-red hover:bg-mkp-red-hover text-white transition-all rounded-sm disabled:opacity-50 disabled:cursor-not-allowed">{isSubmitting ? 'Removendo...' : 'Remover'}</button>
+              <button onClick={() => { handleDelete(confirmDelete) }} disabled={isSubmitting} className="flex-1 font-barlow font-700 text-sm uppercase tracking-widest py-3 bg-mkp-red hover:bg-mkp-red-hover text-white transition-all rounded-sm disabled:opacity-50 disabled:cursor-not-allowed">{isSubmitting ? 'Removendo...' : 'Remover'}</button>
             </div>
           </motion.div>
         </div>
